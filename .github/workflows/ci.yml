@@ -20,15 +20,15 @@ jobs:
         with:
           node-version: '22.x'
 
+      - name: Install dependencies
+        run: npm ci
+
       - name: set version
         id: set_version
         run: |
           version=$(date +'%Y%m%d.%H%M%S')
           echo "version=$version" >> "$GITHUB_OUTPUT"
           printf '{"version": "%s" }' "$version" > public/version.json
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
 
       - name: Run tests
         run: |
@@ -37,13 +37,15 @@ jobs:
 
       - name: Update coverage
         run: |
+          sudo apt-get update
+          sudo apt-get install -y jq bc
           coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
           color=$(echo "$coverage < 80" | bc | awk '{if ($1) print "red"; else print "green"}')
           curl -s -X POST "https://pizza-factory.cs329.click/api/badge/${{ secrets.NET_ID }}/jwtpizzacoverage?label=Coverage&value=$coverage%25&color=$color" -H "authorization: bearer ${{ secrets.FACTORY_API_KEY }}"
 
       - name: Build
         run: |
-          npm ci && npm run build
+          npm run build
           cp dist/index.html dist/404.html
 
       - name: Update pages artifact
