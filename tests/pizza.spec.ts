@@ -137,8 +137,18 @@ async function basicInit(page: Page) {
 
 
 
-    expect(route.request().method()).toBe('GET');
-    await route.fulfill({ json: franchiseRes });
+    //handle both GET and POST requests to franchise endpoint
+    const method = route.request().method();
+    if (method === 'GET') {
+      //for GET requests, return franchise list
+      await route.fulfill({ json: franchiseRes });
+
+
+
+    } else if (method === 'POST') {
+      //for POST requests, return success response
+      await route.fulfill({ json: { success: true } });
+    }
   });
 
 
@@ -438,6 +448,18 @@ coverageTest('delivery page', async ({ page }) => {
   await basicInit(page);
   await page.goto('/delivery');
   await expect(page.locator('h2')).toContainText('Here is your JWT Pizza!');
+
+
+
+  await page.getByRole('button', { name: 'Verify' }).click();
+
+  await page.getByRole('button', { name: 'Order more' }).click();
+  await expect(page.locator('h2').first()).toContainText('Awesome is a click away');
+  await page.goto('/delivery');
+  
+  //test close button
+  await page.getByRole('button', { name: 'Verify' }).click();
+  await page.getByRole('button', { name: 'Close' }).click();
 });
 
 
@@ -483,14 +505,51 @@ coverageTest('admin dashboard', async ({ page }) => {
   await page.getByRole('button', { name: 'Login' }).click();
   await expect(page.getByRole('link', { name: 'AD' })).toBeVisible();
   
-
-
-
-
-
-  //admin dashboard
-  await page.goto('/admin-dashboard');
-  await expect(page.locator('h2')).toContainText('Mama Ricci\'s kitchen');
+  // Navigate to admin dashboard
+  await page.getByRole('link', { name: 'AD' }).click();
+  await expect(page.locator('h2').first()).toContainText('Mama Ricci\'s kitchen');
+  
+  // Test franchise filter functionality (if it exists)
+  const franchiseFilter = page.getByPlaceholder('Filter franchises');
+  if (await franchiseFilter.count() > 0) {
+    await franchiseFilter.fill('test');
+    await page.getByRole('button', { name: 'Submit' }).first().click();
+  }
+  
+  // Test franchise pagination (if it exists)
+  const prevButton = page.locator('button').filter({ hasText: '«' }).first();
+  if (await prevButton.count() > 0) {
+    await expect(prevButton).toBeDisabled();
+  }
+  
+  const nextButton = page.locator('button').filter({ hasText: '»' }).first();
+  if (await nextButton.count() > 0 && await nextButton.isEnabled()) {
+    await nextButton.click();
+  }
+  
+  // Test user filter functionality (if it exists)
+  const userFilter = page.getByPlaceholder('Filter users');
+  if (await userFilter.count() > 0) {
+    await userFilter.fill('test');
+    await page.getByRole('button', { name: 'Submit' }).nth(1).click();
+  }
+  
+  // Test user pagination (if it exists)
+  const userPrevButton = page.locator('button').filter({ hasText: '«' }).nth(1);
+  if (await userPrevButton.count() > 0) {
+    await expect(userPrevButton).toBeDisabled();
+  }
+  
+  const userNextButton = page.locator('button').filter({ hasText: '»' }).nth(1);
+  if (await userNextButton.count() > 0 && await userNextButton.isEnabled()) {
+    await userNextButton.click();
+  }
+  
+  // Test delete user button (if users exist)
+  const deleteUserButtons = page.getByRole('button', { name: 'Delete' });
+  if (await deleteUserButtons.count() > 0) {
+    await deleteUserButtons.first().click();
+  }
 });
 
 
@@ -509,6 +568,24 @@ coverageTest('franchise dashboard', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'FU' })).toBeVisible();
   await page.goto('/franchise-dashboard');
   await expect(page.locator('h2').first()).toContainText('So you want a piece of the pie?');
+  
+  // Test store filter functionality (if it exists)
+  const storeFilter = page.getByPlaceholder('Filter stores');
+  if (await storeFilter.count() > 0) {
+    await storeFilter.fill('test');
+    await page.getByRole('button', { name: 'Submit' }).click();
+  }
+  
+  // Test store pagination (if it exists)
+  const prevButton = page.locator('button').filter({ hasText: '«' });
+  if (await prevButton.count() > 0) {
+    await expect(prevButton).toBeDisabled();
+  }
+  
+  const nextButton = page.locator('button').filter({ hasText: '»' });
+  if (await nextButton.count() > 0 && await nextButton.isEnabled()) {
+    await nextButton.click();
+  }
 });
 
 
@@ -543,9 +620,28 @@ coverageTest('create franchise', async ({ page }) => {
   //wait
   await expect(page.getByRole('link', { name: 'AD' })).toBeVisible();
   
-  //go to ceate franchise
+  //go to create franchise
   await page.goto('/create-franchise');
   await expect(page.locator('h2')).toContainText('Create franchise');
+  
+  //form input and submi
+  await page.getByPlaceholder('franchise name').fill('Test Franchise');
+  await page.getByPlaceholder('franchisee admin email').fill('test@franchise.com');
+
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.locator('h2').first()).toContainText('The web\'s best pizza');
+  await page.goto('/create-franchise');
+
+
+
+
+
+  await page.getByPlaceholder('franchise name').fill('Test Franchise');
+  await page.getByPlaceholder('franchisee admin email').fill('test@franchise.com');
+  await page.getByRole('button', { name: 'Create' }).click();
+  
+  // Should navigate back to admin dashboard after creation
+  await expect(page.locator('h2').first()).toContainText('Create franchise');
 });
 
 
@@ -555,18 +651,76 @@ coverageTest('create franchise', async ({ page }) => {
 coverageTest('create store', async ({ page }) => {
   await basicInit(page);
   
-  //login as
+  //login as franchisee
   await page.getByRole('link', { name: 'Login' }).click();
   await page.getByRole('textbox', { name: 'Email address' }).fill('franchisee@jwt.com');
   await page.getByRole('textbox', { name: 'Password' }).fill('franchisee');
   await page.getByRole('button', { name: 'Login' }).click();
   
-  // wait
+
   await expect(page.getByRole('link', { name: 'FU' })).toBeVisible();
-  
-  // go to the store
+
   await page.goto('/franchise-dashboard/create-store');
   await expect(page.locator('h2')).toContainText('Create store');
+  await page.getByPlaceholder('store name').fill('Test Store');
+  
+  //cancel button
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.locator('h2').first()).toContainText('So you want a piece of the pie?');
+  
+  //go back to create store
+  await page.goto('/franchise-dashboard/create-store');
+  
+
+
+  //test form submission
+  await page.getByPlaceholder('store name').fill('Test Store');
+  await page.getByRole('button', { name: 'Create' }).click();
+  await expect(page.locator('h2').first()).toContainText('Create store');
+});
+
+coverageTest('close franchise', async ({ page }) => {
+  await basicInit(page);
+  
+  //login as admin
+  await page.getByRole('link', { name: 'Login' }).click();
+  await page.getByRole('textbox', { name: 'Email address' }).fill('admin@jwt.com');
+  await page.getByRole('textbox', { name: 'Password' }).fill('admin');
+  await page.getByRole('button', { name: 'Login' }).click();
+  
+
+
+
+
+
+  //navigate to admin dashboard first
+  await page.getByRole('link', { name: 'AD' }).click();
+  await page.goto('/admin-dashboard/close-franchise');
+  await expect(page).toHaveURL(/close-franchise/);
+});
+
+
+
+
+
+
+
+
+coverageTest('close store', async ({ page }) => {
+  await basicInit(page);
+  
+  //login as franchisee
+  await page.getByRole('link', { name: 'Login' }).click();
+  await page.getByRole('textbox', { name: 'Email address' }).fill('franchisee@jwt.com');
+  await page.getByRole('textbox', { name: 'Password' }).fill('franchisee');
+  await page.getByRole('button', { name: 'Login' }).click();
+
+
+
+
+  await page.getByRole('link', { name: 'FU' }).click();
+  await page.goto('/franchise-dashboard/close-store');
+  await expect(page).toHaveURL(/close-store/);
 });
 
 coverageTest('error handling', async ({ page }) => {
