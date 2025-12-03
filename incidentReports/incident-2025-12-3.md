@@ -78,7 +78,6 @@ Look into additional log retention with a paid grafana account.
 ## Action items
 
 ```md
-**EXAMPLE**:
 
 Implement automatic chaos-test shutdown
 Owner: DevOps Lead — Due: 2025-12-10
