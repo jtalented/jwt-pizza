@@ -29,8 +29,8 @@ For nearly 1 hour, services were impacted. Luckily, the incident affected 0 actu
 
 ```md
 
-- _2025-12-01 21:00_ - Chaos testing is initiated for the JWT Pizza service
-- _2025-12-02 08:00_ - Scheduled chaos testing window begins
+- _2025-12-02 21:00_ - Chaos testing is initiated for the JWT Pizza service
+- _2025-12-03 08:00_ - Scheduled chaos testing window begins
 - _09:56_ - Grafana order failure alert triggers due to elevated POST failures
 - _10:04_ - On call engineer acknowledges the alert
 - _10:10_ - Engineer reviews HTTP logs and identifies missing Pizza Factory responses
